@@ -47,7 +47,7 @@ fun main() {
 		.name(from("minecraft:space"))
 		.effects(
 			BiomeEffects.builder()
-				.biomeParticle(BiomeParticle(1f, NormalOption(from("minecraft:underwater"))))
+				.biomeParticle(BiomeParticle(0.1f, NormalOption(from("minecraft:underwater"))))
 				.build()
 		)
 		.build()
