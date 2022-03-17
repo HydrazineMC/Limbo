@@ -5,47 +5,73 @@ import kotlin.io.path.createFile
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import net.kyori.adventure.text.minimessage.MiniMessage.miniMessage
+import net.minestom.server.MinecraftServer.getBiomeManager
 import net.minestom.server.MinecraftServer.getDimensionTypeManager
 import net.minestom.server.MinecraftServer.getGlobalEventHandler
 import net.minestom.server.MinecraftServer.getInstanceManager
-import net.minestom.server.MinecraftServer.getSchedulerManager
 import net.minestom.server.MinecraftServer.init
 import net.minestom.server.coordinate.Pos
 import net.minestom.server.entity.GameMode.ADVENTURE
-import net.minestom.server.entity.Player
-import net.minestom.server.entity.damage.DamageType.fromPlayer
-import net.minestom.server.event.entity.EntityAttackEvent
-import net.minestom.server.event.player.PlayerDeathEvent
 import net.minestom.server.event.player.PlayerLoginEvent
 import net.minestom.server.event.player.PlayerMoveEvent
 import net.minestom.server.event.player.PlayerSpawnEvent
 import net.minestom.server.extras.velocity.VelocityProxy.enable
-import net.minestom.server.particle.Particle
-import net.minestom.server.particle.ParticleCreator.createParticlePacket
-import net.minestom.server.timer.TaskSchedule.tick
+import net.minestom.server.instance.Chunk.CHUNK_SIZE_X
+import net.minestom.server.instance.Chunk.CHUNK_SIZE_Z
+import net.minestom.server.instance.DynamicChunk
+import net.minestom.server.instance.block.Block.BARRIER
 import net.minestom.server.utils.NamespaceID.from
-import net.minestom.server.world.DimensionType.builder
+import net.minestom.server.world.DimensionType
+import net.minestom.server.world.biomes.Biome
+import net.minestom.server.world.biomes.BiomeEffects
+import net.minestom.server.world.biomes.BiomeParticle
+import net.minestom.server.world.biomes.BiomeParticle.NormalOption
 
 fun main() {
+	// Init Server
 	val server = init()
 
-	val dimension = builder(from("minecraft:the_end"))
-		.ambientLight(0f)
-		.fixedTime(6000)
+	// Create the dimension
+	val dimension = DimensionType.builder(from("minecraft:space"))
 		.effects("minecraft:the_end")
 		.minY(0)
 		.height(16)
 		.logicalHeight(16)
-		.infiniburn(from("minecraft:infiniburn_end"))
 		.build()
 
+	// Register the dimension
 	getDimensionTypeManager().addDimension(dimension)
 
+	// Create the biome
+	val biome = Biome.builder()
+		.name(from("minecraft:space"))
+		.effects(
+			BiomeEffects.builder()
+				.biomeParticle(BiomeParticle(1f, NormalOption(from("minecraft:underwater"))))
+				.build()
+		)
+		.build()
+
+	// Register the biome
+	getBiomeManager().addBiome(biome)
+
+	// Create the instance
 	val instance = getInstanceManager().createInstanceContainer(dimension)
 
-	instance.time = 18000
-	instance.timeRate = 0
+	// Chunk supplier
+	instance.setChunkSupplier { _, chunkX, chunkZ ->
+		val chunk = DynamicChunk(instance, chunkX, chunkZ)
 
+		for (x in 0 ..CHUNK_SIZE_X) for (z in 0 ..CHUNK_SIZE_Z) {
+			chunk.setBlock(x, 0, z, BARRIER)
+
+			for (y in 0 .. 15) chunk.setBiome(x, y, z, biome)
+		}
+
+		chunk
+	}
+
+	// Init Velocity Support
 	val secretPath = Path("velocitySecret")
 	if (!secretPath.exists()) secretPath.createFile()
 
@@ -53,8 +79,7 @@ fun main() {
 
 	enable(secret) // Enable Velocity
 
-	instance.chunkGenerator = Generator()
-
+	// Handle Player Spawns
 	getGlobalEventHandler().addListener(PlayerLoginEvent::class.java) {
 		it.player.gameMode = ADVENTURE
 
@@ -62,10 +87,12 @@ fun main() {
 		it.player.respawnPoint = Pos(0.0, 1.0, 0.0)
 	}
 
+	// Welcome the player
 	getGlobalEventHandler().addListener(PlayerSpawnEvent::class.java) {
 		it.player.sendMessage(miniMessage().deserialize("<aqua><red><b>Welcome to Limbo!</b></red>\nAs you're here, the server is restarting, or something broke.\n<grey><i>How am I meant to know? I'm just a pre-written message.</i></grey>\nAnyway, you can switch to another server with <white>\"/server\"</white>.\nHowever you're probably looking for <blue><u><click:run_command:/server creative>Creative</click></u></blue>, so just click the button."))
 	}
 
+	// World wrap around
 	getGlobalEventHandler().addListener(PlayerMoveEvent::class.java) {
 		var newX = it.newPosition.x
 		var newZ = it.newPosition.z
@@ -77,32 +104,6 @@ fun main() {
 		if (newZ < -32) newZ = 32.0
 
 		if (newX != it.newPosition.x || newZ != it.newPosition.z) it.newPosition = Pos(newX, it.newPosition.y, newZ)
-	}
-
-	getSchedulerManager().scheduleTask({
-		instance.players.forEach {
-			it.sendPacket(
-				createParticlePacket(
-					Particle.UNDERWATER,
-					it.position.x,
-					it.position.y,
-					it.position.z,
-					4f,
-					4f,
-					4f,
-					1024,
-				)
-			)
-		}
-	}, tick(1), tick(2))
-
-	getGlobalEventHandler().addListener(EntityAttackEvent::class.java) {
-		(it.target as Player).damage(fromPlayer(it.entity as Player), 1f)
-	}
-
-	getGlobalEventHandler().addListener(PlayerDeathEvent::class.java) {
-		it.deathText = null
-		it.chatMessage = null
 	}
 
 	server.start("0.0.0.0", 10000)

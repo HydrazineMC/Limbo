@@ -8,6 +8,8 @@ plugins {
 
 application {
   mainClass.set("net.horizonsend.limbo.LimboKt")
+
+	mainClassName = "net.horizonsend.limbo.LimboKt"
 }
 
 repositories {
