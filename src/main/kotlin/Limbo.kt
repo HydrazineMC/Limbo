@@ -4,6 +4,8 @@ import kotlin.io.path.Path
 import kotlin.io.path.createFile
 import kotlin.io.path.exists
 import kotlin.io.path.readText
+import kotlin.math.max
+import kotlin.math.min
 import net.kyori.adventure.text.minimessage.MiniMessage.miniMessage
 import net.minestom.server.MinecraftServer.getBiomeManager
 import net.minestom.server.MinecraftServer.getDimensionTypeManager
@@ -97,13 +99,22 @@ fun main() {
 		var newX = it.newPosition.x
 		var newZ = it.newPosition.z
 
-		if (newX > 32) newX = -32.0
-		if (newZ > 32) newZ = -32.0
+		var flipPitch = false
 
-		if (newX < -32) newX = 32.0
-		if (newZ < -32) newZ = 32.0
+		if (-32 > newX || newX > 32) {
+			newX = -min(max(-32.0, newX), 32.0)
+			flipPitch = true
+		}
 
-		if (newX != it.newPosition.x || newZ != it.newPosition.z) it.newPosition = Pos(newX, it.newPosition.y, newZ)
+		if (-32 > newZ || newZ > 32) {
+			newZ = -min(max(-32.0, newZ), 32.0)
+			flipPitch = true
+		}
+
+		val newPitch = if (flipPitch) -it.newPosition.pitch else it.newPosition.pitch
+
+		if (newX != it.newPosition.x || newZ != it.newPosition.z || newPitch != it.newPosition.pitch)
+			it.newPosition = Pos(newX, it.newPosition.y, newZ, it.newPosition.yaw, newPitch)
 	}
 
 	server.start("0.0.0.0", 10000)
