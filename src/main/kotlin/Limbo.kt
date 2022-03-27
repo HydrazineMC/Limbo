@@ -99,22 +99,22 @@ fun main() {
 		var newX = it.newPosition.x
 		var newZ = it.newPosition.z
 
-		var flipPitch = false
+		var flipYaw = false
 
 		if (-32 > newX || newX > 32) {
 			newX = -min(max(-32.0, newX), 32.0)
-			flipPitch = true
+			flipYaw = true
 		}
 
 		if (-32 > newZ || newZ > 32) {
 			newZ = -min(max(-32.0, newZ), 32.0)
-			flipPitch = true
+			flipYaw = true
 		}
 
-		val newPitch = if (flipPitch) -it.newPosition.pitch else it.newPosition.pitch
+		val newYaw = if (flipYaw) -it.newPosition.yaw else it.newPosition.yaw
 
-		if (newX != it.newPosition.x || newZ != it.newPosition.z || newPitch != it.newPosition.pitch)
-			it.newPosition = Pos(newX, it.newPosition.y, newZ, it.newPosition.yaw, newPitch)
+		if (newX != it.newPosition.x || newZ != it.newPosition.z || newYaw != it.newPosition.yaw)
+			it.newPosition = Pos(newX, it.newPosition.y, newZ, newYaw, it.newPosition.pitch)
 	}
 
 	server.start("0.0.0.0", 10000)
