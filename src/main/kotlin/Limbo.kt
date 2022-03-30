@@ -117,5 +117,5 @@ fun main() {
 			it.newPosition = Pos(newX, it.newPosition.y, newZ, newYaw, it.newPosition.pitch)
 	}
 
-	server.start("0.0.0.0", 10000)
+	server.start("0.0.0.0", 30001)
 }
